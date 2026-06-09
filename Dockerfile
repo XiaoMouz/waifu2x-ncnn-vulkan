@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.6
 
 # ============================================================
-# Stage 1: Build waifu2x-ncnn-vulkan binary
+# Stage 1: Build waifu2x-ncnn-vulkan binary (Ubuntu 22.04)
 # ============================================================
 FROM ubuntu:22.04 AS builder
 
@@ -27,16 +27,26 @@ RUN cmake -S /src/src -B /src/build -G Ninja \
     && cmake --build /src/build --target install/strip
 
 # ============================================================
-# Stage 2: Runtime image with Node.js + Vulkan loader
+# Stage 2: Install Node.js 20 onto Ubuntu 22.04 runtime
+#   - Same glibc/libgomp as the builder → no ABI mismatch
+#   - No mesa-vulkan-drivers: llvmpipe software Vulkan causes
+#     ncnn to crash even in CPU mode (-g -1). Real GPU ICDs are
+#     provided at runtime via Docker device passthrough instead.
 # ============================================================
-FROM node:20-bookworm-slim
+FROM ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
+
+# Node.js 20 via NodeSource
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends \
+        nodejs \
         libvulkan1 \
         libgomp1 \
-        mesa-vulkan-drivers \
-        vulkan-tools \
         tini \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r app && useradd -r -g app -m -d /home/app app

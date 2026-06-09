@@ -9,7 +9,8 @@ services:
       - waifu2x-uploads:/app/uploads
       - waifu2x-outputs:/app/outputs
     # ---- NVIDIA GPU passthrough (requires nvidia-container-toolkit) ----
-    # Uncomment to enable GPU acceleration via Vulkan.
+    # The image has NO software Vulkan renderer (mesa removed to fix CPU-mode
+    # crashes). GPU support requires the host driver ICD to be passed through.
     # deploy:
     #   resources:
     #     reservations:

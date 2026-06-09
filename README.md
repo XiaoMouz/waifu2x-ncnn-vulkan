@@ -15,6 +15,37 @@ Download Windows/Linux/macOS Executable for Intel/AMD/NVIDIA/Apple-Silicon GPU
 
 This package includes all the binaries and models required. It is portable, so no CUDA or Caffe runtime environment is needed :)
 
+## Web UI (one-click deployment)
+
+A browser-based UI is provided in [`web/`](web/). Two deployment options:
+
+### 1. Docker (recommended)
+
+```bash
+# Pull and run the prebuilt image (CPU fallback works out of the box):
+docker run -d --name waifu2x-web -p 3000:3000 \
+    ghcr.io/xiaomouz/waifu2x-ncnn-vulkan:latest
+
+# Or with docker compose:
+docker compose up -d
+```
+
+Then open `http://localhost:3000`.
+
+For NVIDIA GPU acceleration, install [`nvidia-container-toolkit`](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/) and add `--gpus all` to the `docker run` command (or uncomment the `deploy.resources` block in `docker-compose.yml`).
+
+### 2. Standalone binary + web bundle
+
+Download `waifu2x-web-<version>-linux-x86_64.zip` from [Releases](../../releases), then:
+
+```bash
+unzip waifu2x-web-*-linux-x86_64.zip
+cd waifu2x-web-*-linux-x86_64
+./start.sh
+```
+
+Requires Node.js 18+. No global install needed (`node_modules` is bundled).
+
 ## Usages
 
 ### Example Command

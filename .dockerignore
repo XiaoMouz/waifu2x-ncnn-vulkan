@@ -1,0 +1,37 @@
+# Git
+.git
+.gitignore
+.gitmodules
+.github
+
+# Build artifacts
+build
+build-*
+**/build
+**/CMakeCache.txt
+**/CMakeFiles
+*.o
+*.obj
+
+# Node
+web/node_modules
+web/uploads
+web/outputs
+**/node_modules
+
+# Docs / images
+images
+README.md
+*.md
+!web/README.md
+
+# Editor
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore

@@ -1,0 +1,116 @@
+name: web-bundle
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+concurrency:
+  group: web-bundle-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  linux-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+
+      - name: Get version
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(date +'%Y%m%d')-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+              build-essential cmake ninja-build \
+              libvulkan-dev libomp-dev glslang-tools
+
+      - name: Build waifu2x binary
+        run: |
+          cmake -S src -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=$PWD/install
+          cmake --build build -j "$(nproc)"
+          cmake --build build --target install/strip
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci --omit=dev
+
+      - name: Assemble bundle
+        run: |
+          PKG="waifu2x-web-${{ steps.ver.outputs.version }}-linux-x86_64"
+          mkdir -p "$PKG/web" "$PKG/models"
+          cp install/bin/waifu2x-ncnn-vulkan "$PKG/waifu2x-ncnn-vulkan"
+          cp -r models/* "$PKG/models/"
+          cp -r web/server.js web/package.json web/package-lock.json web/public web/node_modules "$PKG/web/"
+          cp LICENSE README.md "$PKG/" 2>/dev/null || true
+
+          cat > "$PKG/start.sh" <<'EOF'
+          #!/usr/bin/env bash
+          set -e
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          export WAIFU2X_BIN="$DIR/waifu2x-ncnn-vulkan"
+          export MODELS_DIR="$DIR/models"
+          export PORT="${PORT:-3000}"
+          chmod +x "$WAIFU2X_BIN"
+          echo "Starting waifu2x Web UI at http://localhost:$PORT"
+          cd "$DIR/web"
+          exec node server.js
+          EOF
+          chmod +x "$PKG/start.sh"
+
+          cat > "$PKG/README.txt" <<'EOF'
+          waifu2x Web UI - one-click deployment bundle
+          =============================================
+
+          Requirements:
+            - Linux x86_64
+            - Node.js 18+ (https://nodejs.org)
+            - Optional: Vulkan-capable GPU + drivers for hardware acceleration
+
+          Quick start:
+            ./start.sh
+
+          Then open http://localhost:3000 in your browser.
+
+          Environment variables:
+            PORT          (default 3000)         Server port
+            WAIFU2X_BIN   (auto)                 Path to waifu2x binary
+            MODELS_DIR    (auto)                 Path to model directory
+          EOF
+
+          zip -9 -rq "$PKG.zip" "$PKG"
+          echo "BUNDLE=$PKG.zip" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ env.BUNDLE }}
+          path: ${{ env.BUNDLE }}
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.BUNDLE }}

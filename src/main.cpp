@@ -750,7 +750,16 @@ int main(int argc, char** argv)
     CoInitializeEx(NULL, COINIT_MULTITHREADED);
 #endif
 
-    ncnn::create_gpu_instance();
+    // Skip Vulkan initialization entirely when all gpuids are -1 (CPU-only mode).
+    // Even with -g -1, ncnn still enumerates and creates VkDevice for every physical
+    // device found (including llvmpipe / software renderers), which can crash on some
+    // drivers. CPU inference never uses any Vulkan resources, so avoid it altogether.
+    bool use_vulkan = gpuid.empty(); // auto-select path still needs enumeration
+    for (int i = 0; i < (int)gpuid.size(); i++)
+        if (gpuid[i] != -1) { use_vulkan = true; break; }
+
+    if (use_vulkan)
+        ncnn::create_gpu_instance();
 
     if (gpuid.empty())
     {
@@ -773,14 +782,14 @@ int main(int argc, char** argv)
     jobs_load = std::min(jobs_load, cpu_count);
     jobs_save = std::min(jobs_save, cpu_count);
 
-    int gpu_count = ncnn::get_gpu_count();
+    int gpu_count = use_vulkan ? ncnn::get_gpu_count() : 0;
     for (int i=0; i<use_gpu_count; i++)
     {
         if (gpuid[i] < -1 || gpuid[i] >= gpu_count)
         {
             fprintf(stderr, "invalid gpu device\n");
 
-            ncnn::destroy_gpu_instance();
+            if (use_vulkan) ncnn::destroy_gpu_instance();
             return -1;
         }
     }
@@ -947,7 +956,8 @@ int main(int argc, char** argv)
         waifu2x.clear();
     }
 
-    ncnn::destroy_gpu_instance();
+    if (use_vulkan)
+        ncnn::destroy_gpu_instance();
 
     return 0;
 }

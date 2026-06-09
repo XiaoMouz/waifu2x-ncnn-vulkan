@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>waifu2x Web UI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>waifu2x <span>图像超分辨率增强</span></h1>
+  </header>
+
+  <main>
+    <!-- Upload + Config row -->
+    <div class="top-row">
+      <!-- Upload area -->
+      <section class="card upload-card">
+        <h2>上传图片</h2>
+        <div id="dropzone" class="dropzone">
+          <div class="dropzone-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+            </svg>
+            <p>拖拽图片至此处</p>
+            <p class="hint">或点击选择文件（JPG / PNG / WebP，最大 10MB）</p>
+          </div>
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden />
+        </div>
+        <div id="preview-wrap" class="preview-wrap hidden">
+          <img id="preview-img" alt="预览" />
+          <div id="preview-info" class="preview-info"></div>
+        </div>
+      </section>
+
+      <!-- Config panel -->
+      <section class="card config-card">
+        <h2>参数配置</h2>
+
+        <div class="field">
+          <label>噪点去除</label>
+          <div class="btn-group" id="noise-group">
+            <button class="btn-opt" data-val="-1">关闭缩放</button>
+            <button class="btn-opt active" data-val="0">无降噪</button>
+            <button class="btn-opt" data-val="1">等级 1</button>
+            <button class="btn-opt" data-val="2">等级 2</button>
+            <button class="btn-opt" data-val="3">等级 3</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>放大倍数</label>
+          <div class="btn-group" id="scale-group">
+            <button class="btn-opt" data-val="1">1×</button>
+            <button class="btn-opt active" data-val="2">2×</button>
+            <button class="btn-opt" data-val="4">4×</button>
+            <button class="btn-opt" data-val="8">8×</button>
+            <button class="btn-opt" data-val="16">16×</button>
+            <button class="btn-opt" data-val="32">32×</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>模型</label>
+          <select id="model-select">
+            <option value="models-cunet">CUNet（通用，默认）</option>
+            <option value="models-upconv_7_anime_style_art_rgb">UpConv 7 动漫风格</option>
+            <option value="models-upconv_7_photo">UpConv 7 照片</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>计算设备</label>
+          <select id="gpu-select">
+            <option value="-1">CPU（无需显卡）</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>输出格式</label>
+          <div class="btn-group" id="format-group">
+            <button class="btn-opt active" data-val="png">PNG</button>
+            <button class="btn-opt" data-val="jpg">JPG</button>
+            <button class="btn-opt" data-val="webp">WebP</button>
+          </div>
+        </div>
+
+        <div class="field field-toggle">
+          <label>TTA 模式 <span class="hint">（更高质量，速度较慢）</span></label>
+          <label class="toggle">
+            <input type="checkbox" id="tta-toggle" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <button id="process-btn" class="btn-primary" disabled>开始处理</button>
+      </section>
+    </div>
+
+    <!-- Progress -->
+    <section class="card progress-card hidden" id="progress-section">
+      <h2>处理进度</h2>
+      <div class="progress-bar-wrap">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+      <div id="log-box" class="log-box"></div>
+    </section>
+
+    <!-- Result comparison -->
+    <section class="card result-card hidden" id="result-section">
+      <h2>结果对比</h2>
+      <div class="compare-wrap">
+        <div class="compare-panel">
+          <div class="compare-label">原图</div>
+          <img id="result-before" alt="原图" />
+        </div>
+        <div class="compare-divider"></div>
+        <div class="compare-panel">
+          <div class="compare-label">增强后</div>
+          <img id="result-after" alt="增强后" />
+        </div>
+      </div>
+      <div class="result-actions">
+        <a id="download-btn" class="btn-primary" download>下载结果图片</a>
+        <button id="reset-btn" class="btn-secondary">处理新图片</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -119,7 +119,7 @@ processBtn.addEventListener('click', () => {
   };
 
   processBtn.disabled = true;
-  progressSection.classList.remove('hidden');
+  progressSection.classList.remove('hidden', 'has-error');
   resultSection.classList.add('hidden');
   logBox.innerHTML = '';
   progressBar.style.width = '0%';
@@ -144,6 +144,19 @@ processBtn.addEventListener('click', () => {
 
 function listenProgress(id) {
   const es = new EventSource(`/api/progress/${id}`);
+  let settled = false;
+
+  function finishError(msg) {
+    if (settled) return;
+    settled = true;
+    es.close();
+    progressBar.classList.remove('indeterminate');
+    progressBar.style.width = '0%';
+    progressSection.classList.add('has-error');
+    appendLog(`[ERROR] ${msg}`, 'error');
+    processBtn.disabled = false;
+    processBtn.textContent = '重新处理';
+  }
 
   es.addEventListener('message', e => {
     const { log } = JSON.parse(e.data);
@@ -151,6 +164,8 @@ function listenProgress(id) {
   });
 
   es.addEventListener('done', e => {
+    if (settled) return;
+    settled = true;
     es.close();
     progressBar.classList.remove('indeterminate');
     progressBar.style.width = '100%';
@@ -159,23 +174,15 @@ function listenProgress(id) {
   });
 
   es.addEventListener('error', e => {
-    es.close();
-    progressBar.classList.remove('indeterminate');
-    progressBar.style.width = '0%';
     let msg = '处理失败';
     try { msg = JSON.parse(e.data).message; } catch (_) {}
-    appendLog(`[ERROR] ${msg}`, 'error');
-    processBtn.disabled = false;
+    finishError(msg);
   });
 
-  // Handle SSE connection error (e.g., server down)
+  // onerror fires on connection drop; settled flag prevents double-handling
   es.onerror = () => {
-    const task = tasks && tasks.get ? null : null; // client-side only
-    // If readyState is CLOSED, the server ended the stream (normal after done/error)
-    if (es.readyState === EventSource.CLOSED) return;
-    appendLog('[WARN] 连接中断，请检查服务器状态', 'error');
-    es.close();
-    processBtn.disabled = false;
+    if (settled || es.readyState === EventSource.CLOSED) return;
+    finishError('连接中断，请检查服务器是否正在运行');
   };
 }
 
@@ -215,4 +222,5 @@ resetBtn.addEventListener('click', () => {
   fileInput.value = '';
   progressBar.style.width = '0%';
   progressBar.classList.remove('indeterminate');
+  progressSection.classList.remove('has-error');
 });

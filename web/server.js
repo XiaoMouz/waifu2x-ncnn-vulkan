@@ -70,6 +70,10 @@ app.post('/api/process', (req, res) => {
   // Validate params
   if (![-1, 0, 1, 2, 3].includes(Number(noise))) return res.status(400).json({ error: 'Invalid noise' });
   if (![1, 2, 4, 8, 16, 32].includes(Number(scale))) return res.status(400).json({ error: 'Invalid scale' });
+  // noise=-1 means "scale only" — requires actual scaling; noise=0 means "no denoise" which is fine with scale=1
+  if (Number(noise) === -1 && Number(scale) === 1) {
+    return res.status(400).json({ error: '噪点等级选"关闭缩放"时，放大倍数不能为 1×（等于什么都不做）。请选择 2× 或更高倍数，或将噪点等级改为 0~3。' });
+  }
   const allowedModels = ['models-cunet', 'models-upconv_7_anime_style_art_rgb', 'models-upconv_7_photo'];
   if (!allowedModels.includes(model)) return res.status(400).json({ error: 'Invalid model' });
   if (!['png', 'jpg', 'webp'].includes(format)) return res.status(400).json({ error: 'Invalid format' });
@@ -119,13 +123,16 @@ app.post('/api/process', (req, res) => {
   proc.stdout.on('data', d => d.toString().split('\n').filter(Boolean).forEach(pushLog));
   proc.stderr.on('data', d => d.toString().split('\n').filter(Boolean).forEach(pushLog));
 
-  proc.on('close', (code) => {
+  proc.on('close', (code, signal) => {
     if (code === 0) {
       task.status = 'done';
       pushEvent('done', { outputUrl: `/outputs/${outputFilename}` });
     } else {
       task.status = 'error';
-      pushEvent('error', { message: `Process exited with code ${code}` });
+      const msg = signal
+        ? `进程被信号终止 (${signal})，可能是内存不足或驱动崩溃`
+        : `进程退出，错误码 ${code}`;
+      pushEvent('error', { message: msg });
     }
 
     // Auto-cleanup after 30 minutes

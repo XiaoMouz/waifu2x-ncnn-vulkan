@@ -364,3 +364,11 @@ select:focus { outline: none; border-color: var(--accent); }
 
 /* Utilities */
 .hidden { display: none !important; }
+
+.progress-card.has-error {
+  border-color: var(--error);
+}
+
+.progress-card.has-error .progress-bar-wrap {
+  background: rgba(248, 113, 113, 0.15);
+}

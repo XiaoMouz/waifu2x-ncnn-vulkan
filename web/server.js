@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const WAIFU2X_BIN = process.env.WAIFU2X_BIN || path.resolve(__dirname, '../waifu2x-ncnn-vulkan');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const OUTPUTS_DIR = path.join(__dirname, 'outputs');
-const MODELS_DIR = path.resolve(__dirname, '../models');
+const MODELS_DIR = process.env.MODELS_DIR || path.resolve(__dirname, '../models');
 
 // Ensure directories exist
 [UPLOADS_DIR, OUTPUTS_DIR].forEach(d => fs.mkdirSync(d, { recursive: true }));

@@ -1,0 +1,30 @@
+services:
+  waifu2x-web:
+    image: ghcr.io/xiaomouz/waifu2x-ncnn-vulkan:latest
+    container_name: waifu2x-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - waifu2x-uploads:/app/uploads
+      - waifu2x-outputs:/app/outputs
+    # ---- NVIDIA GPU passthrough (requires nvidia-container-toolkit) ----
+    # Uncomment to enable GPU acceleration via Vulkan.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
+    #   - NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+    #
+    # ---- AMD / Intel GPU passthrough (Linux DRI) ----
+    # devices:
+    #   - /dev/dri:/dev/dri
+
+volumes:
+  waifu2x-uploads:
+  waifu2x-outputs:
